@@ -7,7 +7,7 @@ var graphql = require('graphql');
 import { GraphQLList, GraphQLObjectType, GraphQLString, GraphQLInt } from "graphql";
 import { Character, Rarities, Classes, Types, Transformation } from "./character";
 
-const characterData: any[] = require("../data/DokkancharacterData.json")
+const characterData: any[] = require('../data/DokkanCharacterData.json')
 
 var transformationType = new graphql.GraphQLObjectType({
   name: 'Transformation',
@@ -132,6 +132,22 @@ var queryType = new graphql.GraphQLObjectType({
           }
         });
         return result
+      }
+    },
+    lastCharacters: {
+      type: new GraphQLList(characterType),
+      resolve: () => {
+        let result: Character[] = characterData;
+
+        return result.sort((a, b) => parseInt(b.id) - parseInt(a.id)).slice(0, 50);
+      }
+    },
+    allCharacters : {
+      type: new GraphQLList(characterType),
+      resolve: () => {
+        let result: Character[] = characterData;
+
+        return characterData;
       }
     }
   }
