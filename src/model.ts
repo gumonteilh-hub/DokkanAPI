@@ -1,3 +1,15 @@
+export interface Card {
+    id: string,
+    name: string,
+    rarity: string,
+    class: string,
+    type: string,
+    imageURL: ImageLink,
+    leaderSkill: string,
+    categories: string[],
+  }
+
+
 export interface Character {
     name: string,
     title: string,
@@ -8,7 +20,7 @@ export interface Character {
     type: Types,
     cost: number,
     id: string,
-    imageURL: string,
+    imageURL: ImageLink,
     leaderSkill: string,
     ezaLeaderSkill?: string,
     superAttack: string,
@@ -41,6 +53,10 @@ export interface Character {
     transformations?: Transformation[]
 }
 
+export interface ImageLink {
+    simpleUrl?: string
+    complexeUrl?: string
+}
 export enum Classes {
     Super = "Super",
     Extreme = "Extreme"
