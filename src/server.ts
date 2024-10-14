@@ -1,94 +1,93 @@
-let express = require('express');
-let cors = require('cors');
-let { graphqlHTTP } = require('express-graphql');
-var graphql = require('graphql');
-import { GraphQLInt, GraphQLList, GraphQLString } from "graphql";
+const express = require("express");
+const cors = require("cors");
+const graphql = require("graphql");
+const { ruruHTML } = require("ruru/server");
 import { Card, Character } from "./model";
 import { cleanData, isInCategories } from "./utils";
+import { createHandler } from "graphql-http/lib/use/express";
 
-// prepare data 
-const Brutdata: Character[] = require('../data/DokkanCharacterData.json')
-const data = cleanData(Brutdata);
+// prepare data
+const brutdata: Character[] = require("../data/DokkanCharacterData.json");
+const data = cleanData(brutdata);
 
 // data type
-var imageType = new graphql.GraphQLObjectType({
-  name: 'Image',
+const imageType = new graphql.GraphQLObjectType({
+  name: "Image",
   fields: {
-    simpleUrl: { type: GraphQLString },
-    complexeUrl: { type: GraphQLString },
-  }
-})
-
-var CardType = new graphql.GraphQLObjectType({
-  name: 'Card',
-  fields: {
-    id: {
-      type: graphql.GraphQLNonNull(graphql.GraphQLString),
-      description: 'The id of the character'
-    },
-    name: { type: GraphQLString },
-    rarity: { type: GraphQLString },
-    class: { type: GraphQLString },
-    type: { type: GraphQLString },
-    imageURL: { type: imageType },
-    leaderSkill: { type: GraphQLString },
-    superAttack: { type: GraphQLString },
-  }
+    simpleUrl: { type: graphql.GraphQLString },
+    complexeUrl: { type: graphql.GraphQLString },
+  },
 });
 
-var LeadedCards = new graphql.GraphQLObjectType({
-  name: 'LeadedCards',
+const CardType = new graphql.GraphQLObjectType({
+  name: "Card",
   fields: {
-    boostPercentage: { type: GraphQLInt! },
-    cards: { type: GraphQLList(CardType) },
-  }
-})
+    id: {
+      type: new graphql.GraphQLNonNull(graphql.GraphQLString),
+      description: "The id of the character",
+    },
+    name: { type: graphql.GraphQLString },
+    rarity: { type: graphql.GraphQLString },
+    class: { type: graphql.GraphQLString },
+    type: { type: graphql.GraphQLString },
+    imageURL: { type: imageType },
+    leaderSkill: { type: graphql.GraphQLString },
+    superAttack: { type: graphql.GraphQLString },
+  },
+});
+
+const LeadedCards = new graphql.GraphQLObjectType({
+  name: "LeadedCards",
+  fields: {
+    boostPercentage: { type: graphql.GraphQLInt! },
+    cards: { type: new graphql.GraphQLList(CardType) },
+  },
+});
 
 // query
-var queryType = new graphql.GraphQLObjectType({
-  name: 'Query',
+const queryType = new graphql.GraphQLObjectType({
+  name: "Query",
   fields: {
     characters: {
-      type: new GraphQLList(CardType),
+      type: new graphql.GraphQLList(CardType),
       args: {
-        categories: { type: GraphQLList(GraphQLString) },
-        id: { type: GraphQLString }
+        categories: { type: new graphql.GraphQLList(graphql.GraphQLString) },
+        id: { type: graphql.GraphQLString },
       },
-      // @ts-ignore
-      resolve: (_notUsed, { categories, id }) => {
-
+      resolve: (_notUsed: any, { categories = [], id }: { categories?: string[]; id?: string }) => {
         if (id) {
-          return [data.find(card => card.id === id)]
+          return [data.find((card) => card.id === id)];
         }
-
-        return data.filter(character => isInCategories(character, categories))
+    
+        return data.filter((character) => isInCategories(character, categories));
       }
     },
     lastCharacters: {
-      type: new GraphQLList(CardType),
+      type: new graphql.GraphQLList(CardType),
       resolve: () => {
         return data.slice(0, 100);
-      }
+      },
     },
     allCharacters: {
-      type: new GraphQLList(CardType),
+      type: new graphql.GraphQLList(CardType),
       resolve: () => {
         return data;
-      }
+      },
     },
     charactersLeadBy: {
-      type: new GraphQLList(LeadedCards),
+      type: new graphql.GraphQLList(LeadedCards),
       args: {
-        id: { type: GraphQLString },
+        id: { type: graphql.GraphQLString },
       },
-      // @ts-ignore
-      resolve: (_notUsed, { id }) => {
-        const leader = data.find(card => card.id === id)?.technicalLeaderSkill;
+      resolve: (_notUsed: any, { id }: { id: string }) => {
+        const leader = data.find(
+          (card) => card.id === id
+        )?.technicalLeaderSkill;
         if (!leader?.mainLeaders) return [];
 
         let boostGroups: {
-          [key: number]: Card[]
-        } = {}
+          [key: number]: Card[];
+        } = {};
 
         // Parcourir toutes les cartes
         for (let card of data) {
@@ -111,7 +110,7 @@ var queryType = new graphql.GraphQLObjectType({
             for (let secondaryLeader of leader.secondaryLeaders) {
               if (card.categories.has(secondaryLeader.category)) {
                 secondaryLeaderBoost = secondaryLeader.percentage;
-                break;  // On suppose qu'il n'y a qu'un leader secondaire applicable
+                break; // On suppose qu'il n'y a qu'un leader secondaire applicable
               }
             }
 
@@ -130,28 +129,35 @@ var queryType = new graphql.GraphQLObjectType({
           }
         }
 
-        const result = Object.entries(boostGroups).map(([boostPercentage, cards]) => ({
-          boostPercentage : parseInt(boostPercentage),
-          cards
-        })).sort((a,b) => (b.boostPercentage - a.boostPercentage));
+        const result = Object.entries(boostGroups)
+          .map(([boostPercentage, cards]) => ({
+            boostPercentage: parseInt(boostPercentage),
+            cards,
+          }))
+          .sort((a, b) => b.boostPercentage - a.boostPercentage);
 
         return result;
-      }
-
+      },
     },
-  }
+  },
 });
 
 // server config
-var schema = new graphql.GraphQLSchema({ query: queryType });
+const schema = new graphql.GraphQLSchema({ query: queryType });
 
 let app = express();
-app.use(cors())
-app.use('/graphql', graphqlHTTP({
-  schema: schema,
-  graphiql: true,
-}));
+app.use(cors());
+app.all(
+  "/graphql",
+  createHandler({
+    schema: schema,
+  })
+);
 
+app.get("/", (_req: any, res: any) => {
+  res.type("html");
+  res.end(ruruHTML({ endpoint: "/graphql" }));
+});
 
 app.listen(8080);
-console.log('Running a GraphQL API server at http://localhost:8080/graphql');
+console.log("Running a GraphQL API server at http://localhost:8080/graphql");
