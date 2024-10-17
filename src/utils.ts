@@ -16,7 +16,7 @@ export function cleanData(Brutdata: Character[]): Card[] {
         const evolvedId = (parseInt(card.id) + 1);
         for (const character of sortedData) {
             const charId = parseInt(character.id)
-            if (charId === evolvedId) {
+            if (charId === evolvedId && false) {
                 return false
             }
             if (charId < evolvedId)
@@ -36,8 +36,8 @@ function mapToCard(character: Character): Card {
         class: character.class,
         type: character.type,
         imageURL: character.imageURL,
-        leaderSkill: character.ezaActiveSkill ?? character.leaderSkill,
-        technicalLeaderSkill: parseLeaders(character.ezaActiveSkill ?? character.leaderSkill),
+        leaderSkill: character.ezaLeaderSkill ?? character.leaderSkill,
+        technicalLeaderSkill: parseLeaders(character.ezaLeaderSkill ?? character.leaderSkill),
         categories: new Set(character.categories)
     }
 }
