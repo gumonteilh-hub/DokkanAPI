@@ -6,6 +6,8 @@ import { Card, Character } from "./model";
 import { cleanData, isInCategories } from "./utils";
 import { createHandler } from "graphql-http/lib/use/express";
 
+
+
 // prepare data
 const brutdata: Character[] = require("../data/DokkanCharacterData.json");
 const data = cleanData(brutdata);
