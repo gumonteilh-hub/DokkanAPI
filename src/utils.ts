@@ -1,4 +1,4 @@
-import { Card, Category, Character, Lead, LeaderRecap } from "./model";
+import { Card, Category, Character, Lead, LeaderRecap, Rarities } from "./model";
 
 export function isInCategories(card: Card, categories: string[]) {
     // character needs to be in every category given
@@ -12,11 +12,11 @@ export function cleanData(Brutdata: Character[]): Card[] {
     const liteData: Card[] = Brutdata.map(character => (mapToCard(character)));
 
     const sortedData = liteData.sort((a, b) => parseInt(b.id) - parseInt(a.id))
-    const filteredData = sortedData.filter((card, index) => {
+    const filteredData = sortedData.filter((card) => {
         const evolvedId = (parseInt(card.id) + 1);
         for (const character of sortedData) {
             const charId = parseInt(character.id)
-            if (charId === evolvedId && false) {
+            if (charId === evolvedId && card.rarity === Rarities.UR && character.rarity === Rarities.LR && card.type === character.type) {
                 return false
             }
             if (charId < evolvedId)
