@@ -84,7 +84,8 @@ export enum Types {
 
 export enum Rarities {
     UR = "UR",
-    LR = "LR"
+    LR = "LR",
+    UNSUPORTED = "unsuported"
 }
 
 export interface Transformation {

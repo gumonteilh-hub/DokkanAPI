@@ -2,8 +2,9 @@ import axios, { AxiosError } from 'axios';
 import { existsSync, mkdirSync } from "fs";
 import { writeFile } from "fs/promises";
 import { resolve } from "path";
-import { cp } from 'fs';
-
+import { Transformation, Character, Rarities, Classes, Types, ImageLink } from '../model';
+const jsdom = require("jsdom");
+const { JSDOM } = jsdom;
 
 export async function saveDokkanResults() {
     console.log('Starting UR');
@@ -11,20 +12,16 @@ export async function saveDokkanResults() {
     console.log('Starting LR');
     const LRData = await getDokkanData('LR');
     console.log('Finished scrape, saving data');
-    let data = LRData.concat(URData);
-    let currentDate = new Date();
-    let day = ("0" + currentDate.getUTCDate()).slice(-2);
-    let month = ("0" + currentDate.getUTCMonth() + 1).slice(-2);
-    let year = currentDate.getUTCFullYear()
-    saveData(year + month + day + 'DokkanCharacterData', data)
+    const data = LRData.concat(URData);
+    saveData('DokkanCharacterData', data)
 }
 
 function saveData(fileName: string, data: unknown) {
-    if (!existsSync(resolve(__dirname, 'data'))) {
+    if (!existsSync(resolve(__dirname , '..', '..', 'data'))) {
         mkdirSync('data');
     }
     writeFile(
-        resolve(__dirname, `data/${fileName}.json`),
+        resolve(__dirname, '..', '..', `data/${fileName}.json`),
         JSON.stringify(data),
         { encoding: 'utf8' })
 }
@@ -93,9 +90,9 @@ function extractCharacterData(characterDocument: Document) {
         title: characterDocument.querySelector('.mw-parser-output')?.querySelector('table > tbody > tr > td:nth-child(2)')?.innerHTML.split('<br>')[0].split('<b>')[1] ?? 'Error',
         maxLevel: parseInt((characterDocument.querySelector('.mw-parser-output')?.querySelector('table > tbody > tr:nth-child(3) > td')?.textContent?.split('/')[1] || characterDocument.querySelector('.mw-parser-output')?.querySelector('table > tbody > tr:nth-child(3) > td')?.textContent?.split('/')[0]) ?? 'Error'),
         maxSALevel: parseInt((characterDocument.querySelector('.mw-parser-output')?.querySelector('table > tbody > tr:nth-child(3) > td:nth-child(2) > center')?.innerHTML.split('>/')[1]) ?? ' Error'),
-        rarity: Rarities[characterDocument.querySelector('.mw-parser-output')?.querySelector('table > tbody > tr:nth-child(3) > td:nth-child(3) > center')?.querySelector('a')?.getAttribute('title')?.split('Category:')[1] ?? 'Error'],
-        class: Classes[characterDocument.querySelector('.mw-parser-output')?.querySelector('table > tbody > tr:nth-child(3) > td:nth-child(4) > center:nth-child(1) > a:nth-child(1)')?.getAttribute('title')?.split(' ')[0].split('Category:')[1] ?? 'Error'],
-        type: Types[characterDocument.querySelector('.mw-parser-output')?.querySelector('table > tbody > tr:nth-child(3) > td:nth-child(4) > center:nth-child(1) > a:nth-child(1)')?.getAttribute('title')?.split(' ')[1] ?? 'Error'],
+        rarity: Rarities[characterDocument.querySelector('.mw-parser-output')?.querySelector('table > tbody > tr:nth-child(3) > td:nth-child(3) > center')?.querySelector('a')?.getAttribute('title')?.split('Category:')[1] as keyof typeof Rarities ?? "unsuported"],
+        class: Classes[characterDocument.querySelector('.mw-parser-output')?.querySelector('table > tbody > tr:nth-child(3) > td:nth-child(4) > center:nth-child(1) > a:nth-child(1)')?.getAttribute('title')?.split(' ')[0].split('Category:')[1] as keyof typeof Classes ?? 'Error'],
+        type: Types[characterDocument.querySelector('.mw-parser-output')?.querySelector('table > tbody > tr:nth-child(3) > td:nth-child(4) > center:nth-child(1) > a:nth-child(1)')?.getAttribute('title')?.split(' ')[1] as keyof typeof Types ?? 'Error'],
         cost: parseInt((characterDocument.querySelector('.mw-parser-output')?.querySelector('table > tbody > tr:nth-child(3) > td:nth-child(5) > center:nth-child(1)')?.textContent) ?? 'Error'),
         id: characterDocument.querySelector('.mw-parser-output')?.querySelector('table > tbody > tr:nth-child(3) > td:nth-child(6) > center:nth-child(1)')?.textContent ?? 'Error',
         imageURL: getImageUrl(characterDocument),
@@ -142,8 +139,8 @@ function extractTransformedCharacterData(characterDocument: Document): Transform
         const transformationData: Transformation = {
             transformedName: characterDocument.querySelector(`.mw-parser-output > div:nth-child(2) > div:nth-child(${index + 2}) > table > tbody > tr > td:nth-child(2)`)?.innerHTML.split('<br>')[1].split('</b>')[0].replaceAll('&amp;', '&') ?? 'Error',
             transformedID: characterDocument.querySelector(`.mw-parser-output > div:nth-child(2) > div:nth-child(${index + 2}) > table > tbody > tr:nth-child(3) > td:nth-child(6)`)?.textContent ?? 'Error',
-            transformedClass: Classes[characterDocument.querySelector(`.mw-parser-output > div:nth-child(2) > div:nth-child(${index + 2}) > table > tbody > tr:nth-child(3) > td:nth-child(4) > center > a`)?.getAttribute('title')?.split(' ')[0].split('Category:')[1] ?? 'Error'],
-            transformedType: Types[characterDocument.querySelector(`.mw-parser-output > div:nth-child(2) > div:nth-child(${index + 2}) > table > tbody > tr:nth-child(3) > td:nth-child(4) > center > a`)?.getAttribute('title')?.split(' ')[1] ?? 'Error'],
+            transformedClass: Classes[characterDocument.querySelector(`.mw-parser-output > div:nth-child(2) > div:nth-child(${index + 2}) > table > tbody > tr:nth-child(3) > td:nth-child(4) > center > a`)?.getAttribute('title')?.split(' ')[0].split('Category:')[1] as keyof typeof Classes ?? "error"],
+            transformedType: Types[characterDocument.querySelector(`.mw-parser-output > div:nth-child(2) > div:nth-child(${index + 2}) > table > tbody > tr:nth-child(3) > td:nth-child(4) > center > a`)?.getAttribute('title')?.split(' ')[1] as keyof typeof Types ?? 'Error'],
             transformedSuperAttack: characterDocument.querySelector(`.mw-parser-output > div:nth-child(2) > div:nth-child(${index + 2})`)?.querySelector('[data-image-name="Super atk.png"]')?.closest('tr')?.nextElementSibling?.textContent ?? 'Error',
             transformedEZASuperAttack: characterDocument.querySelector(`.mw-parser-output > div:nth-child(2) > div:nth-child(${index + 2})`)?.querySelector('.righttablecard > table > tbody > tr > td > div > div > div:nth-child(3)')?.querySelector('[data-image-name="Super atk.png"]')?.closest('tr')?.nextElementSibling?.textContent ?? undefined,
             transformedUltraSuperAttack: characterDocument.querySelector(`.mw-parser-output > div:nth-child(2) > div:nth-child(${index + 2})`)?.querySelector('[data-image-name="Ultra Super atk.png"]')?.closest('tr')?.nextElementSibling?.textContent ?? undefined,
@@ -153,7 +150,7 @@ function extractTransformedCharacterData(characterDocument: Document): Transform
             transformedActiveSkill: characterDocument.querySelector(`.mw-parser-output > div:nth-child(2) > div:nth-child(${index + 2})`)?.querySelector('[data-image-name="Active skill.png"]')?.closest('tr')?.nextElementSibling?.textContent ?? undefined,
             transformedActiveSkillCondition: characterDocument.querySelector(`.mw-parser-output > div:nth-child(2) > div:nth-child(${index + 2})`)?.querySelector('[data-image-name="Activation Condition.png"]')?.closest('tr')?.nextElementSibling?.textContent ?? undefined,
             transformedLinks: Array.from(characterDocument.querySelector(`.mw-parser-output > div:nth-child(2) > div:nth-child(${index + 2})`)?.querySelector('[data-image-name="Link skill.png"]')?.closest('tr')?.nextElementSibling?.querySelectorAll('span > a') ?? []).map(link => link.textContent ?? 'Error'),
-            transformedImageURL: characterDocument.querySelector(`.mw-parser-output > div:nth-child(2) > div:nth-child(${index + 2}) > table > tbody > tr > td > div > img`)?.getAttribute('src') ?? characterDocument.querySelector(`.mw-parser-output > div:nth-child(2) > div:nth-child(${index + 2}) > table > tbody > tr > td > a`)?.getAttribute('href'),
+            transformedImageURL: characterDocument.querySelector(`.mw-parser-output > div:nth-child(2) > div:nth-child(${index + 2}) > table > tbody > tr > td > div > img`)?.getAttribute('src') ?? characterDocument.querySelector(`.mw-parser-output > div:nth-child(2) > div:nth-child(${index + 2}) > table > tbody > tr > td > a`)?.getAttribute('href') ?? "error",
         }
         transformedArray.push(transformationData)
     }
@@ -162,8 +159,10 @@ function extractTransformedCharacterData(characterDocument: Document): Transform
 
 function getImageUrl(characterDocument: Document): ImageLink {
         const baseDocument = characterDocument.querySelector('.mw-parser-output')?.getElementsByTagName('table')[0];
-        const simpleUrl = (baseDocument?.querySelector('tbody > tr > td > div > img')?.getAttribute('src') || 
-            baseDocument?.querySelector('tbody > tr > td > a')?.getAttribute('href') || baseDocument?.querySelector('tbody > tr > td > img')?.getAttribute('src') ) ;
+        if( baseDocument == undefined) {
+            return {simpleUrl: "error"}
+        }
+        const simpleUrl = (baseDocument?.querySelector('tbody > tr > td > div > img')?.getAttribute('src') ?? baseDocument?.querySelector('tbody > tr > td > a')?.getAttribute('href')) ;
 
         if (simpleUrl) {
             return { simpleUrl : sanitizeImgUrl(simpleUrl) }
@@ -171,6 +170,9 @@ function getImageUrl(characterDocument: Document): ImageLink {
 
     try {
         const imageContainer = baseDocument.querySelector('tbody > tr > td > div')?.children;
+        if( imageContainer == undefined) {
+            return {complexeUrl: "error"}
+        }
         const complexeUrl = (imageContainer[3].firstChild as HTMLAnchorElement).href;
         return { complexeUrl : sanitizeImgUrl(complexeUrl) }
     } catch {

@@ -10,7 +10,7 @@ ARG NODE_VERSION=20.18.0
 
 ################################################################################
 # Use node image for base image for all stages.
-FROM node:${NODE_VERSION}-alpine as base
+FROM node:${NODE_VERSION}-alpine AS base
 
 # Set working directory for all build stages.
 WORKDIR /usr/src/app
@@ -18,7 +18,7 @@ WORKDIR /usr/src/app
 
 ################################################################################
 # Create a stage for installing production dependecies.
-FROM base as deps
+FROM base AS deps
 
 # Download dependencies as a separate step to take advantage of Docker's caching.
 # Leverage a cache mount to /root/.npm to speed up subsequent builds.
@@ -42,13 +42,14 @@ RUN --mount=type=bind,source=package.json,target=package.json \
 
 # Copy the rest of the source files into the image.
 COPY . .
+
 # Run the build script.
 RUN npm run build
 
 ################################################################################
 # Create a new stage to run the application with minimal runtime dependencies
 # where the necessary files are copied from the build stage.
-FROM base as final
+FROM base AS final
 
 # Use production node environment by default.
 ENV NODE_ENV production
@@ -63,11 +64,10 @@ COPY package.json .
 # the built application from the build stage into the image.
 COPY --from=deps /usr/src/app/node_modules ./node_modules
 COPY --from=build /usr/src/app/dist ./dist
-COPY --from=build /usr/src/app/data ./data
-
+COPY --from=build --chmod=777 /usr/src/app/data/DokkanCharacterData.json ./data/DokkanCharacterData.json
 
 # Expose the port that the application listens on.
 EXPOSE 3001
 
 # Run the application.
-CMD node ./dist/server.js
+CMD ["node", "./dist/server.js"]

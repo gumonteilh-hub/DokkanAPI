@@ -3,14 +3,19 @@ const cors = require("cors");
 const graphql = require("graphql");
 const { ruruHTML } = require("ruru/server");
 import { Card, Character } from "./model";
+import { saveDokkanResults as scrapeDokkanData } from "./scraper/scraper";
 import { cleanData, isInCategories } from "./utils";
 import { createHandler } from "graphql-http/lib/use/express";
 
+let data: Card[] = [];
 
+scrapeDokkanData().then(() => {
+  data = cleanData(require("../data/DokkanCharacterData.json"));
+});
 
 // prepare data
 const brutdata: Character[] = require("../data/DokkanCharacterData.json");
-const data = cleanData(brutdata);
+data = cleanData(brutdata);
 
 // data type
 const imageType = new graphql.GraphQLObjectType({
@@ -56,13 +61,18 @@ const queryType = new graphql.GraphQLObjectType({
         categories: { type: new graphql.GraphQLList(graphql.GraphQLString) },
         id: { type: graphql.GraphQLString },
       },
-      resolve: (_notUsed: any, { categories = [], id }: { categories?: string[]; id?: string }) => {
+      resolve: (
+        _notUsed: any,
+        { categories = [], id }: { categories?: string[]; id?: string }
+      ) => {
         if (id) {
           return [data.find((card) => card.id === id)];
         }
-    
-        return data.filter((character) => isInCategories(character, categories));
-      }
+
+        return data.filter((character) =>
+          isInCategories(character, categories)
+        );
+      },
     },
     lastCharacters: {
       type: new graphql.GraphQLList(CardType),
